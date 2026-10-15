@@ -1,0 +1,19 @@
+[project]
+name = "lunch-bot"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.143",
+    "openai>=3.29.0",
+    "python-dotenv>=1.2.4",
+    "requests>=2.32",
+    "uvicorn>=0.54",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
