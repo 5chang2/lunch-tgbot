@@ -2,6 +2,7 @@
 import json
 import os
 import random
+import db
 
 import requests
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ URL = f"https://api.telegram.org/bot{os.getenv('TELEGRAM_TOKEN')}"
 MENUS = ["라면", "햄버거", "마라탕", "샐러드"]
 
 app = FastAPI()  # 웹 서버 앱
-
+conn = db.connect()  # 서버가 켜질 때 DB 파일을 한 번 연다
 
 @app.post("/")  # 텔레그램이 메시지(JSON)를 이 주소로 POST 해 준다 (webhook)
 def webhook(body: dict):
@@ -41,6 +42,19 @@ def webhook(body: dict):
         output = "이번 주 행운의 번호: " + ", ".join(str(n) for n in numbers)
     elif text == "/weather":
         output = weather_text()
+    elif text == "/ate" or text.startswith("/ate "):
+        menu = text[5:].strip()
+        if menu == "":
+            output = "/ate 김치찌개 처럼 먹은 메뉴를 같이 적어 주세요."
+        else:
+            db.save_meal(conn, menu, db.now())
+            output = f"기록했어요: {menu}"
+    elif text == "/history":
+        rows = db.recent_meals(conn)
+        if rows == []:
+            output = "아직 기록이 없어요. /ate 김치찌개 로 남겨 보세요."
+        else:
+            output = "\n".join(f"{eaten_at}  {menu}" for eaten_at, menu in rows)
     elif text.startswith("/"):
         output = "모르는 명령이에요. /help 를 보내 보세요."
     else:
