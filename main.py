@@ -3,11 +3,15 @@ import json
 import os
 import random
 import db
-
+from ai import ask_ai
+from prompts import SYSTEM_PROMPT_V1
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI
-
+from ai import ask_ai
+from places import load_places, search
+from prompts import build_prompt_v3
+from weather import describe, get_weather, weather_text
 from weather import weather_text
 
 load_dotenv()
@@ -17,6 +21,8 @@ MENUS = ["라면", "햄버거", "마라탕", "샐러드"]
 
 app = FastAPI()  # 웹 서버 앱
 conn = db.connect()  # 서버가 켜질 때 DB 파일을 한 번 연다
+places = load_places("places_sample.csv")  # 서버가 켜질 때 한 번만 읽는다
+
 
 @app.post("/")  # 텔레그램이 메시지(JSON)를 이 주소로 POST 해 준다 (webhook)
 def webhook(body: dict):
@@ -58,8 +64,11 @@ def webhook(body: dict):
     elif text.startswith("/"):
         output = "모르는 명령이에요. /help 를 보내 보세요."
     else:
-        output = text  # 메아리
-
+        # output = text  # 메아리
+        # output = ask_ai(SYSTEM_PROMPT_V1, text)  # 메아리 대신 GPT가 답한다
+        found = search(text, places)
+        system = build_prompt_v3(describe(get_weather()), db.recent_meals(conn), found)
+        output = ask_ai(system, text)
     requests.get(f"{URL}/sendMessage", params={"chat_id": chat_id, "text": output})  # 답장 보내기
     print("[보냄]", output)
     return {"ok": True}  # 200 OK = 잘 받았다. 중간에 에러로 멈추면(500) 텔레그램이 같은 메시지를 다시 보낸다
